@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+python-multipart
+sqlmodel>=0.0.22
+twilio
+openai
+python-dotenv
+jinja2
+aiofiles

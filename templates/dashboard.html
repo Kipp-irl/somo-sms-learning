@@ -1,0 +1,1413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Somo — Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+    <div class="app-layout">
+
+        <!-- ── Sidebar ──────────────────────── -->
+        <aside class="sidebar">
+            <a href="/instructor" class="sidebar-brand">
+                <span class="icon">📚</span> Somo
+            </a>
+            <div class="sidebar-section">Platform</div>
+            <a href="#" class="sidebar-link active" data-view="overview">
+                <span class="nav-icon">◻</span> Overview
+            </a>
+            <a href="#" class="sidebar-link" data-view="students">
+                <span class="nav-icon">◎</span> Students
+            </a>
+            <a href="#" class="sidebar-link" data-view="courses">
+                <span class="nav-icon">◈</span> Courses
+            </a>
+            <a href="#" class="sidebar-link" data-view="clusters">
+                <span class="nav-icon">⊞</span> Clusters
+            </a>
+            <a href="#" class="sidebar-link" data-view="assessments">
+                <span class="nav-icon">✎</span> Assessments
+            </a>
+            <a href="#" class="sidebar-link" data-view="alerts">
+                <span class="nav-icon">⚑</span> Alerts
+                <span class="alert-count" id="alert-badge" style="display:none;">0</span>
+            </a>
+            <a href="#" class="sidebar-link" data-view="simulator">
+                <span class="nav-icon">✉</span> Simulator
+            </a>
+            <div class="sidebar-spacer"></div>
+            <div class="sidebar-section">Account</div>
+            <a href="/" class="sidebar-link" id="logout-link">
+                <span class="nav-icon">→</span> Sign out
+            </a>
+        </aside>
+
+        <!-- ── Main content ─────────────────── -->
+        <div class="main-content">
+
+            <!-- OVERVIEW -->
+            <div id="view-overview">
+                <h1 class="page-title">Overview</h1>
+                <p class="page-subtitle" id="greeting">Monitoring SMS learner activity.</p>
+                <div class="stat-grid" id="stats-grid"></div>
+
+                <!-- Charts Row -->
+                <div class="chart-row" style="margin-top:24px;">
+                    <div class="card chart-card">
+                        <div class="card-header"><h2>Score Trend (30 days)</h2></div>
+                        <div class="card-body chart-body"><canvas id="chart-score-trend"></canvas></div>
+                    </div>
+                    <div class="card chart-card chart-card-sm">
+                        <div class="card-header"><h2>Student States</h2></div>
+                        <div class="card-body chart-body"><canvas id="chart-state-dist"></canvas></div>
+                    </div>
+                </div>
+                <div class="chart-row" style="margin-top:16px;">
+                    <div class="card chart-card">
+                        <div class="card-header"><h2>Topic Performance</h2></div>
+                        <div class="card-body chart-body"><canvas id="chart-topic-perf"></canvas></div>
+                    </div>
+                    <div class="card chart-card chart-card-sm">
+                        <div class="card-header"><h2>Bloom Levels</h2></div>
+                        <div class="card-body chart-body"><canvas id="chart-bloom-dist"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- AI Insights Card -->
+                <div class="card insights-card" style="margin-top:24px;" id="insights-card">
+                    <div class="card-header">
+                        <h2>AI Insights</h2>
+                        <button class="btn btn-ghost btn-sm" onclick="loadInsights(true)">Refresh</button>
+                    </div>
+                    <div class="card-body" id="insights-body">
+                        <div class="card-empty">Loading insights...</div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top:24px;">
+                    <div class="card-header">
+                        <h2>Recent Students</h2>
+                    </div>
+                    <div id="overview-students">
+                        <div class="card-empty">No students yet.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STUDENTS -->
+            <div id="view-students" style="display:none;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                    <h1 class="page-title">Students</h1>
+                    <button class="btn btn-primary" onclick="openStudentModal()">+ Register Student</button>
+                </div>
+                <p class="page-subtitle">Register students and monitor their progress.</p>
+                <div class="filter-bar">
+                    <select id="filter-grade" class="form-input form-input-sm" onchange="loadStudents()">
+                        <option value="">All Grades</option>
+                    </select>
+                    <select id="filter-aptitude" class="form-input form-input-sm" onchange="loadStudents()">
+                        <option value="">All Levels</option>
+                        <option value="untested">Untested</option>
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                    </select>
+                </div>
+                <div class="card">
+                    <div id="students-table">
+                        <div class="card-empty">No students registered.</div>
+                    </div>
+                </div>
+                <div id="student-detail"></div>
+                <div id="student-charts" style="display:none;margin-top:16px;">
+                    <div class="chart-row">
+                        <div class="card chart-card">
+                            <div class="card-header"><h2>Score History</h2></div>
+                            <div class="card-body chart-body"><canvas id="chart-student-scores"></canvas></div>
+                        </div>
+                        <div class="card chart-card">
+                            <div class="card-header"><h2>Topic Accuracy</h2></div>
+                            <div class="card-body chart-body"><canvas id="chart-student-topics"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COURSES -->
+            <div id="view-courses" style="display:none;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                    <h1 class="page-title">Courses</h1>
+                    <button class="btn btn-primary" onclick="openTopicModal()">+ New Topic</button>
+                </div>
+                <p class="page-subtitle">Generate questions and send them to students.</p>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Topics</h2>
+                    </div>
+                    <div id="topics-list">
+                        <div class="card-empty">No topics yet.</div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top:24px;">
+                    <div class="card-header">
+                        <h2>Question Generator</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Topic</label>
+                                <select id="gen-topic" class="form-input"></select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Difficulty</label>
+                                <select id="gen-difficulty" class="form-input">
+                                    <option value="beginner">Beginner</option>
+                                    <option value="intermediate">Intermediate</option>
+                                    <option value="advanced">Advanced</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Bloom Level</label>
+                                <select id="gen-bloom" class="form-input">
+                                    <option value="remember">Remember</option>
+                                    <option value="understand">Understand</option>
+                                    <option value="apply">Apply</option>
+                                    <option value="analyze">Analyze</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Grade Level</label>
+                                <select id="gen-grade" class="form-input">
+                                    <option value="">Any Grade</option>
+                                    <optgroup label="Pre-Primary">
+                                        <option value="PP1">PP1</option>
+                                        <option value="PP2">PP2</option>
+                                    </optgroup>
+                                    <optgroup label="Lower Primary">
+                                        <option value="Grade 1">Grade 1</option>
+                                        <option value="Grade 2">Grade 2</option>
+                                        <option value="Grade 3">Grade 3</option>
+                                    </optgroup>
+                                    <optgroup label="Upper Primary">
+                                        <option value="Grade 4">Grade 4</option>
+                                        <option value="Grade 5">Grade 5</option>
+                                        <option value="Grade 6">Grade 6</option>
+                                    </optgroup>
+                                    <optgroup label="Junior Secondary">
+                                        <option value="Grade 7">Grade 7</option>
+                                        <option value="Grade 8">Grade 8</option>
+                                        <option value="Grade 9">Grade 9</option>
+                                    </optgroup>
+                                    <optgroup label="Senior Secondary">
+                                        <option value="Grade 10">Grade 10</option>
+                                        <option value="Grade 11">Grade 11</option>
+                                        <option value="Grade 12">Grade 12</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Count</label>
+                                <select id="gen-count" class="form-input">
+                                    <option value="3">3</option>
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" id="gen-btn" onclick="generateQuestions()">Generate
+                            Questions</button>
+                        <div id="gen-loading" style="display:none;margin-top:12px;color:var(--text-3);">Generating...
+                            this may take a moment.</div>
+                    </div>
+                </div>
+
+                <div id="questions-panel" style="display:none;margin-top:24px;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Generated Questions</h2>
+                            <button class="btn btn-primary btn-sm" onclick="openSendModal()">Send to Students</button>
+                        </div>
+                        <div id="questions-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CLUSTERS -->
+            <div id="view-clusters" style="display:none;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                    <h1 class="page-title">Clusters</h1>
+                    <button class="btn btn-primary" onclick="openClusterModal()">+ New Cluster</button>
+                </div>
+                <p class="page-subtitle">Student groups — auto-generated from aptitude or custom instructor groups.</p>
+                <div class="filter-bar">
+                    <select id="filter-cluster-type" class="form-input form-input-sm" onchange="loadClusters()">
+                        <option value="">All Clusters</option>
+                        <option value="auto">Auto Clusters</option>
+                        <option value="custom">Custom Clusters</option>
+                    </select>
+                </div>
+                <div id="clusters-grid" class="cluster-grid"></div>
+                <div id="cluster-expanded" style="display:none;margin-top:24px;"></div>
+            </div>
+
+            <!-- ASSESSMENTS -->
+            <div id="view-assessments" style="display:none;">
+                <h1 class="page-title">Assessments</h1>
+                <p class="page-subtitle">Track every question, answer, and grade.</p>
+                <div id="assessment-stats" class="stat-grid" style="margin-bottom:16px;"></div>
+                <div class="filter-bar">
+                    <select id="filter-status" class="form-input form-input-sm" onchange="loadAssessments(true)">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="sent">Sent</option>
+                        <option value="answered">Answered</option>
+                        <option value="graded">Graded</option>
+                    </select>
+                    <select id="filter-assess-topic" class="form-input form-input-sm" onchange="loadAssessments(true)">
+                        <option value="">All Topics</option>
+                    </select>
+                    <select id="filter-assess-grade" class="form-input form-input-sm" onchange="loadAssessments(true)">
+                        <option value="">All Grades</option>
+                        <option value="PP1">PP1</option><option value="PP2">PP2</option>
+                        <option value="Grade 1">Grade 1</option><option value="Grade 2">Grade 2</option><option value="Grade 3">Grade 3</option>
+                        <option value="Grade 4">Grade 4</option><option value="Grade 5">Grade 5</option><option value="Grade 6">Grade 6</option>
+                        <option value="Grade 7">Grade 7</option><option value="Grade 8">Grade 8</option><option value="Grade 9">Grade 9</option>
+                        <option value="Grade 10">Grade 10</option><option value="Grade 11">Grade 11</option><option value="Grade 12">Grade 12</option>
+                    </select>
+                    <input type="date" id="filter-date-from" class="form-input form-input-sm" onchange="loadAssessments(true)" style="max-width:150px;">
+                    <input type="date" id="filter-date-to" class="form-input form-input-sm" onchange="loadAssessments(true)" style="max-width:150px;">
+                </div>
+                <div class="card">
+                    <div id="assessments-table">
+                        <div class="card-empty">No assessments yet.</div>
+                    </div>
+                    <div id="assess-pagination" class="pagination-bar" style="display:none;"></div>
+                </div>
+                <div class="chart-row" style="margin-top:16px;">
+                    <div class="card chart-card">
+                        <div class="card-header"><h2>Score Distribution</h2></div>
+                        <div class="card-body chart-body"><canvas id="chart-score-dist"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ALERTS -->
+            <div id="view-alerts" style="display:none;">
+                <h1 class="page-title">Alerts</h1>
+                <p class="page-subtitle">Students needing attention.</p>
+                <div id="alerts-feed">
+                    <div class="card-empty">No active alerts.</div>
+                </div>
+            </div>
+
+            <!-- SIMULATOR -->
+            <div id="view-simulator" style="display:none;">
+                <h1 class="page-title">SMS Simulator</h1>
+                <p class="page-subtitle">Test the student SMS experience without real SMS credits.</p>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="form-row" style="align-items:flex-end;">
+                            <div class="form-group" style="flex:2;">
+                                <label class="form-label">Simulate as Student</label>
+                                <select id="sim-student" class="form-input" onchange="simSelectStudent()">
+                                    <option value="">-- Select a registered student --</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex:1;">
+                                <label class="form-label">Or enter phone</label>
+                                <input type="tel" id="sim-phone" class="form-input" placeholder="+254712345678">
+                            </div>
+                            <div class="form-group" style="flex:0;">
+                                <button class="btn btn-ghost btn-sm" onclick="simClearChat()">Clear</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="sim-status" class="sim-status-bar" style="display:none;">
+                    <span id="sim-status-name" class="sim-status-name"></span>
+                    <span id="sim-status-state" class="badge badge-blue"></span>
+                    <span id="sim-status-level" class="badge badge-amber"></span>
+                </div>
+                <div class="sim-chat-container card">
+                    <div class="sim-chat-messages" id="sim-messages">
+                        <div class="sim-chat-empty">Select a student above and start typing to simulate an SMS conversation.</div>
+                    </div>
+                    <div class="sim-chat-input">
+                        <input type="text" id="sim-text" class="form-input" placeholder="Type a message as the student..." onkeyup="if(event.key==='Enter')simSend()" disabled>
+                        <button class="btn btn-primary" id="sim-send-btn" onclick="simSend()" disabled>Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Student Registration Modal ────── -->
+    <div class="modal-backdrop" id="student-modal">
+        <div class="modal">
+            <h2>Register Student</h2>
+            <div class="form-group">
+                <label class="form-label">Phone Number</label>
+                <input type="tel" id="s-phone" class="form-input" placeholder="+254712345678">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Name</label>
+                <input type="text" id="s-name" class="form-input" placeholder="Student name">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Age</label>
+                    <input type="number" id="s-age" class="form-input" placeholder="12" min="5" max="25">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Grade</label>
+                    <select id="s-grade" class="form-input">
+                        <optgroup label="Pre-Primary">
+                            <option value="PP1">PP1</option>
+                            <option value="PP2">PP2</option>
+                        </optgroup>
+                        <optgroup label="Lower Primary">
+                            <option value="Grade 1">Grade 1</option>
+                            <option value="Grade 2">Grade 2</option>
+                            <option value="Grade 3">Grade 3</option>
+                        </optgroup>
+                        <optgroup label="Upper Primary">
+                            <option value="Grade 4">Grade 4</option>
+                            <option value="Grade 5">Grade 5</option>
+                            <option value="Grade 6">Grade 6</option>
+                        </optgroup>
+                        <optgroup label="Junior Secondary">
+                            <option value="Grade 7">Grade 7</option>
+                            <option value="Grade 8">Grade 8</option>
+                            <option value="Grade 9">Grade 9</option>
+                        </optgroup>
+                        <optgroup label="Senior Secondary">
+                            <option value="Grade 10">Grade 10</option>
+                            <option value="Grade 11">Grade 11</option>
+                            <option value="Grade 12">Grade 12</option>
+                        </optgroup>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Preferred Language</label>
+                <select id="s-lang" class="form-input">
+                    <option value="English">English</option>
+                    <option value="Swahili">Swahili</option>
+                    <option value="French">French</option>
+                    <option value="Arabic">Arabic</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeStudentModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="registerStudent()">Register &amp; Send Test</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── New Topic Modal ──────────────── -->
+    <div class="modal-backdrop" id="topic-modal">
+        <div class="modal">
+            <h2>New Topic</h2>
+            <div class="form-group">
+                <label class="form-label">Title</label>
+                <input type="text" id="t-title" class="form-input" placeholder="e.g. Basic Algebra">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Subject</label>
+                <select id="t-subject" class="form-input">
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="English">English</option>
+                    <option value="Kiswahili">Kiswahili</option>
+                    <option value="Integrated Science">Integrated Science</option>
+                    <option value="Biology">Biology</option>
+                    <option value="Chemistry">Chemistry</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Social Studies">Social Studies</option>
+                    <option value="History & Government">History &amp; Government</option>
+                    <option value="Geography">Geography</option>
+                    <option value="Agriculture">Agriculture</option>
+                    <option value="Home Science">Home Science</option>
+                    <option value="Business Studies">Business Studies</option>
+                    <option value="Computer Science">Computer Science</option>
+                    <option value="Creative Arts">Creative Arts</option>
+                    <option value="Religious Education">Religious Education</option>
+                    <option value="Health Education">Health Education</option>
+                    <option value="Physical & Health Education">Physical &amp; Health Education</option>
+                    <option value="Environmental Activities">Environmental Activities</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Difficulty</label>
+                <select id="t-difficulty" class="form-input">
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea id="t-desc" class="form-input" placeholder="Describe what the AI should teach..."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeTopicModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="createTopic()">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Send Questions Modal ─────────── -->
+    <div class="modal-backdrop" id="send-modal">
+        <div class="modal modal-lg">
+            <h2>Send Questions to Students</h2>
+            <p class="page-subtitle">Select questions and students, then hit send.</p>
+            <div class="form-row" style="align-items:flex-start;">
+                <div style="flex:1;">
+                    <h3>Questions</h3>
+                    <div id="send-questions-list"></div>
+                </div>
+                <div style="flex:1;">
+                    <h3>Students</h3>
+                    <div class="form-group">
+                        <select id="send-filter" class="form-input form-input-sm" onchange="loadSendStudents()">
+                            <option value="">All Students</option>
+                        </select>
+                    </div>
+                    <div id="send-students-list"></div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeSendModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="sendAssignments()">Send via SMS</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Create Cluster Modal ───────── -->
+    <div class="modal-backdrop" id="cluster-modal">
+        <div class="modal">
+            <h2>Create Custom Cluster</h2>
+            <div class="form-group">
+                <label class="form-label">Cluster Name</label>
+                <input type="text" id="c-name" class="form-input" placeholder="e.g. Remedial Math Group">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea id="c-desc" class="form-input" placeholder="Describe the purpose of this cluster..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Grade Level (optional)</label>
+                <select id="c-grade" class="form-input">
+                    <option value="">Mixed / Any</option>
+                    <option value="PP1">PP1</option><option value="PP2">PP2</option>
+                    <option value="Grade 1">Grade 1</option><option value="Grade 2">Grade 2</option><option value="Grade 3">Grade 3</option>
+                    <option value="Grade 4">Grade 4</option><option value="Grade 5">Grade 5</option><option value="Grade 6">Grade 6</option>
+                    <option value="Grade 7">Grade 7</option><option value="Grade 8">Grade 8</option><option value="Grade 9">Grade 9</option>
+                    <option value="Grade 10">Grade 10</option><option value="Grade 11">Grade 11</option><option value="Grade 12">Grade 12</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Add Students</label>
+                <div id="c-students-list" style="max-height:200px;overflow-y:auto;"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeClusterModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="createCluster()">Create Cluster</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Add Members Modal ──────────── -->
+    <div class="modal-backdrop" id="add-members-modal">
+        <div class="modal">
+            <h2>Add Students to Cluster</h2>
+            <div id="am-students-list" style="max-height:300px;overflow-y:auto;"></div>
+            <div class="modal-actions">
+                <button class="btn btn-ghost" onclick="closeAddMembersModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="addMembersToCluster()">Add Selected</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Auth ─────────────────────────────────
+        const instId = sessionStorage.getItem('inst_id');
+        const instName = sessionStorage.getItem('inst_name');
+        if (!instId) window.location.href = '/instructor/login';
+        else document.getElementById('greeting').textContent = `Welcome back, ${instName}.`;
+        document.getElementById('logout-link').addEventListener('click', () => sessionStorage.clear());
+
+        // ── View switching ──────────────────────
+        document.querySelectorAll('.sidebar-link[data-view]').forEach(link => {
+            link.addEventListener('click', e => {
+                e.preventDefault();
+                const v = link.dataset.view;
+                document.querySelectorAll('.sidebar-link[data-view]').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                document.querySelectorAll('[id^="view-"]').forEach(el => el.style.display = 'none');
+                document.getElementById('view-' + v).style.display = 'block';
+            });
+        });
+
+        // ── Modals ───────────────────────────────
+        function openStudentModal() { document.getElementById('student-modal').classList.add('open'); }
+        function closeStudentModal() { document.getElementById('student-modal').classList.remove('open');['s-phone', 's-name', 's-age'].forEach(id => document.getElementById(id).value = ''); }
+        function openTopicModal() { document.getElementById('topic-modal').classList.add('open'); }
+        function closeTopicModal() { document.getElementById('topic-modal').classList.remove('open');['t-title', 't-desc'].forEach(id => document.getElementById(id).value = ''); document.getElementById('t-subject').selectedIndex = 0; }
+        function openSendModal() { loadSendData(); document.getElementById('send-modal').classList.add('open'); }
+        function closeSendModal() { document.getElementById('send-modal').classList.remove('open'); }
+        document.querySelectorAll('.modal-backdrop').forEach(m => m.addEventListener('click', e => { if (e.target.classList.contains('modal-backdrop')) e.target.classList.remove('open'); }));
+
+        // ── API helpers ──────────────────────────
+        const authHeaders = { 'X-Instructor-Id': instId };
+        const api = (url, opts = {}) => {
+            opts.headers = { ...authHeaders, ...(opts.headers || {}) };
+            return fetch(url, opts).then(r => r.json());
+        };
+        const post = (url, body) => api(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+        // ── Stats ────────────────────────────────
+        async function loadStats() {
+            const d = await api('/api/stats');
+            const grid = document.getElementById('stats-grid');
+            grid.innerHTML = `
+        <div class="stat-card"><div class="stat-label">Students</div><div class="stat-value">${d.total_students}</div></div>
+        <div class="stat-card"><div class="stat-label">Topics</div><div class="stat-value">${d.total_topics}</div></div>
+        <div class="stat-card"><div class="stat-label">Assignments</div><div class="stat-value">${d.total_assignments}</div></div>
+        <div class="stat-card"><div class="stat-label">Avg Score</div><div class="stat-value">${Math.round(d.avg_score * 100)}%</div></div>
+        <div class="stat-card"><div class="stat-label">Response Rate</div><div class="stat-value">${Math.round(d.response_rate * 100)}%</div></div>
+        <div class="stat-card"><div class="stat-label">Active Alerts</div><div class="stat-value ${d.active_alerts > 0 ? 'text-danger' : ''}">${d.active_alerts}</div></div>
+    `;
+            const badge = document.getElementById('alert-badge');
+            if (d.active_alerts > 0) { badge.textContent = d.active_alerts; badge.style.display = 'inline-block'; }
+            else badge.style.display = 'none';
+        }
+
+        // ── Students ────────────────────────────
+        async function loadStudents() {
+            const grade = document.getElementById('filter-grade').value;
+            const apt = document.getElementById('filter-aptitude').value;
+            let url = '/api/students?';
+            if (grade) url += `grade=${encodeURIComponent(grade)}&`;
+            if (apt) url += `aptitude=${apt}&`;
+            const students = await api(url);
+
+            // Overview preview
+            const ov = document.getElementById('overview-students');
+            if (!students.length) { ov.innerHTML = '<div class="card-empty">No students yet.</div>'; }
+            else {
+                ov.innerHTML = '<table class="table"><thead><tr><th>Name</th><th>Grade</th><th>Level</th><th>State</th></tr></thead><tbody>' +
+                    students.slice(0, 5).map(s => `<tr><td class="name-cell">${s.name}</td><td>${s.grade}</td><td><span class="badge badge-amber">${s.aptitude_level}</span></td><td><span class="badge badge-blue">${s.state}</span></td></tr>`).join('') +
+                    '</tbody></table>';
+            }
+
+            const tbl = document.getElementById('students-table');
+            if (!students.length) { tbl.innerHTML = '<div class="card-empty">No students registered.</div>'; return; }
+            tbl.innerHTML = '<table class="table"><thead><tr><th>Name</th><th>Phone</th><th>Grade</th><th>Level</th><th>Cluster</th><th>State</th><th>Today</th><th></th></tr></thead><tbody>' +
+                students.map(s => `<tr>
+            <td class="name-cell">${s.name}</td>
+            <td class="mono">${s.phone}</td>
+            <td>${s.grade}</td>
+            <td><span class="badge badge-amber">${s.aptitude_level}</span></td>
+            <td class="mono">${s.cluster || '-'}</td>
+            <td><span class="badge badge-blue">${s.state}</span></td>
+            <td><span class="badge ${s.daily_used >= 10 ? 'badge-red' : 'badge-green'}">${s.daily_used}/10</span></td>
+            <td><button class="btn btn-ghost btn-sm" onclick="viewStudent('${s.phone}')">Details</button></td>
+        </tr>`).join('') + '</tbody></table>';
+        }
+
+        async function viewStudent(phone) {
+            const s = await api(`/api/students/${encodeURIComponent(phone)}`);
+            const el = document.getElementById('student-detail');
+            el.innerHTML = `<div class="card" style="margin-top:24px;">
+        <div class="card-header"><h2>${s.name}</h2><span class="mono" style="color:var(--text-3);">${s.phone}</span></div>
+        <div class="card-body">
+            <div class="detail-row"><span>Grade:</span><span>${s.grade}</span></div>
+            <div class="detail-row"><span>Language:</span><span>${s.language}</span></div>
+            <div class="detail-row"><span>Aptitude:</span><span class="badge badge-amber">${s.aptitude_level} ${s.aptitude_score != null ? '(' + Math.round(s.aptitude_score * 100) + '%)' : ''}</span></div>
+            <div class="detail-row"><span>Cluster:</span><span class="mono">${s.cluster || 'None'}</span></div>
+        </div>
+        ${s.assignments.length ? `<h3 style="padding:0 20px;">Assignments</h3>
+        <table class="table"><thead><tr><th>Question</th><th>Status</th><th>Response</th><th>Score</th><th>Feedback</th></tr></thead><tbody>` +
+                    s.assignments.map(a => `<tr>
+                <td style="max-width:200px;">${a.question_text}</td>
+                <td><span class="badge badge-blue">${a.status}</span></td>
+                <td>${a.response || '-'}</td>
+                <td class="mono">${a.score != null ? Math.round(a.score * 100) + '%' : '-'}</td>
+                <td style="max-width:200px;">${a.feedback || '-'}</td>
+            </tr>`).join('') + '</tbody></table>' : '<p style="padding:20px;color:var(--text-3);">No assignments yet.</p>'}
+    </div>`;
+            el.scrollIntoView({ behavior: 'smooth' });
+            loadStudentCharts(phone);
+        }
+
+        async function registerStudent() {
+            const phone = document.getElementById('s-phone').value.trim();
+            const name = document.getElementById('s-name').value.trim();
+            if (!phone || !name) return;
+            const r = await post('/api/students', {
+                phone_number: phone,
+                name,
+                age: parseInt(document.getElementById('s-age').value) || null,
+                grade: document.getElementById('s-grade').value,
+                preferred_language: document.getElementById('s-lang').value,
+            });
+            if (r.error) { alert(r.error); return; }
+            closeStudentModal();
+            await Promise.all([loadStudents(), loadStats()]);
+        }
+
+        // ── Topics ───────────────────────────────
+        async function loadTopics() {
+            const topics = await api('/api/topics');
+            const el = document.getElementById('topics-list');
+            if (!topics.length) { el.innerHTML = '<div class="card-empty">No topics yet.</div>'; return; }
+            el.innerHTML = '<div class="topic-list">' + topics.map(t => `
+        <div class="topic-item">
+            <div class="topic-info"><h3>${t.title}</h3><div class="topic-meta"><span>${t.subject}</span><span class="dot"></span><span class="badge badge-amber">${t.difficulty}</span></div></div>
+            <button class="btn btn-danger-ghost btn-sm" onclick="deleteTopic(${t.id})">✕</button>
+        </div>`).join('') + '</div>';
+
+            // Populate topic selector for question generator
+            const sel = document.getElementById('gen-topic');
+            sel.innerHTML = topics.map(t => `<option value="${t.id}">${t.title}</option>`).join('');
+        }
+
+        async function createTopic() {
+            const title = document.getElementById('t-title').value.trim();
+            if (!title) return;
+            await post('/api/topics', {
+                title,
+                subject: document.getElementById('t-subject').value.trim() || 'General',
+                difficulty: document.getElementById('t-difficulty').value,
+                description: document.getElementById('t-desc').value.trim(),
+                instructor_id: parseInt(instId),
+            });
+            closeTopicModal();
+            await Promise.all([loadTopics(), loadStats()]);
+        }
+
+        async function deleteTopic(id) {
+            if (!confirm('Delete this topic?')) return;
+            await fetch(`/api/topics/${id}`, { method: 'DELETE', headers: authHeaders });
+            await Promise.all([loadTopics(), loadStats()]);
+        }
+
+        // ── Question Generator ──────────────────
+        let generatedQuestions = [];
+
+        async function generateQuestions() {
+            const btn = document.getElementById('gen-btn');
+            const loading = document.getElementById('gen-loading');
+            btn.disabled = true; loading.style.display = 'block';
+
+            const questions = await post('/api/questions/generate', {
+                topic_id: parseInt(document.getElementById('gen-topic').value),
+                difficulty: document.getElementById('gen-difficulty').value,
+                bloom_level: document.getElementById('gen-bloom').value,
+                count: parseInt(document.getElementById('gen-count').value),
+                grade: document.getElementById('gen-grade').value,
+            });
+
+            btn.disabled = false; loading.style.display = 'none';
+            generatedQuestions = questions;
+            renderQuestions(questions);
+        }
+
+        function renderQuestions(questions) {
+            const panel = document.getElementById('questions-panel');
+            const list = document.getElementById('questions-list');
+            if (!questions.length) { panel.style.display = 'none'; return; }
+            panel.style.display = 'block';
+            list.innerHTML = questions.map(q => `
+        <div class="question-card" data-id="${q.id}">
+            <div class="question-text">${q.text}</div>
+            <div class="question-meta">
+                <span class="badge badge-amber">${q.difficulty}</span>
+                <span class="badge badge-blue">${q.bloom_level}</span>
+                <span style="color:var(--text-3);font-size:0.75rem;">Hint: ${q.correct_hint}</span>
+            </div>
+            <button class="btn btn-danger-ghost btn-sm" onclick="deleteQuestion(${q.id})">Delete</button>
+        </div>
+    `).join('');
+        }
+
+        async function deleteQuestion(id) {
+            await fetch(`/api/questions/${id}`, { method: 'DELETE', headers: authHeaders });
+            generatedQuestions = generatedQuestions.filter(q => q.id !== id);
+            renderQuestions(generatedQuestions);
+        }
+
+        // ── Send Questions Modal ────────────────
+        async function loadSendData() {
+            // Questions checkboxes
+            const qList = document.getElementById('send-questions-list');
+            const topicId = document.getElementById('gen-topic').value;
+            const allQ = topicId ? await api(`/api/questions?topic_id=${topicId}`) : generatedQuestions;
+            qList.innerHTML = allQ.map(q => `<label class="checkbox-item"><input type="checkbox" value="${q.id}" checked> ${q.text}</label>`).join('');
+
+            // Cluster filter
+            const clusters = await api('/api/clusters');
+            const filter = document.getElementById('send-filter');
+            filter.innerHTML = '<option value="">All Students</option>' + clusters.map(c => `<option value="${c.name}">${c.name} (${c.count})</option>`).join('');
+            await loadSendStudents();
+        }
+
+        async function loadSendStudents() {
+            const cluster = document.getElementById('send-filter').value;
+            let url = '/api/students?';
+            if (cluster) url += `cluster=${encodeURIComponent(cluster)}&`;
+            const students = await api(url);
+            const list = document.getElementById('send-students-list');
+            list.innerHTML = students.map(s => `<label class="checkbox-item"><input type="checkbox" value="${s.phone}" checked> ${s.name} (${s.grade})</label>`).join('');
+        }
+
+        async function sendAssignments() {
+            const qIds = [...document.querySelectorAll('#send-questions-list input:checked')].map(i => parseInt(i.value));
+            const phones = [...document.querySelectorAll('#send-students-list input:checked')].map(i => i.value);
+            if (!qIds.length || !phones.length) { alert('Select at least one question and one student.'); return; }
+            const r = await post('/api/assignments/send', { question_ids: qIds, student_phones: phones });
+            alert(`Sent ${r.created} assignments via SMS.`);
+            closeSendModal();
+            await loadStats();
+        }
+
+        // ── Clusters ────────────────────────────
+        let allClusters = [];
+        let expandedClusterId = null;
+
+        async function loadClusters() {
+            allClusters = await api('/api/clusters');
+            const filter = document.getElementById('filter-cluster-type').value;
+            let filtered = allClusters;
+            if (filter === 'auto') filtered = allClusters.filter(c => !c.is_custom);
+            if (filter === 'custom') filtered = allClusters.filter(c => c.is_custom);
+
+            const grid = document.getElementById('clusters-grid');
+            if (!filtered.length) { grid.innerHTML = '<div class="card-empty">No clusters yet. Register students and complete aptitude tests.</div>'; return; }
+            grid.innerHTML = filtered.map(c => `
+        <div class="cluster-card card" onclick="expandCluster(${c.id})" style="cursor:pointer;">
+            <div class="card-body">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <h3 style="flex:1;">${escHtml(c.name)}</h3>
+                    <span class="badge ${c.is_custom ? 'badge-amber' : 'badge-blue'}">${c.is_custom ? 'Custom' : 'Auto'}</span>
+                </div>
+                <div class="stat-value">${c.count}</div>
+                <div class="stat-label">students${c.grade_level ? ' · ' + c.grade_level : ''}</div>
+                <div style="margin-top:8px;">${c.students.slice(0, 3).map(s => `<span class="badge badge-blue" style="margin:2px;">${escHtml(s.name)}</span>`).join('')}${c.count > 3 ? `<span style="color:var(--text-3);font-size:0.75rem;"> +${c.count - 3} more</span>` : ''}</div>
+            </div>
+        </div>
+    `).join('');
+        }
+
+        async function expandCluster(id) {
+            expandedClusterId = id;
+            const c = allClusters.find(x => x.id === id);
+            if (!c) return;
+            const el = document.getElementById('cluster-expanded');
+            el.style.display = 'block';
+            el.innerHTML = `<div class="card">
+                <div class="card-header">
+                    <div><h2>${escHtml(c.name)}</h2><span class="badge ${c.is_custom ? 'badge-amber' : 'badge-blue'}" style="margin-left:8px;">${c.is_custom ? 'Custom' : 'Auto'}</span></div>
+                    <div style="display:flex;gap:8px;">
+                        ${c.is_custom ? `<button class="btn btn-ghost btn-sm" onclick="openAddMembersModal(${c.id})">+ Add Students</button>` : ''}
+                        ${c.is_custom ? `<button class="btn btn-danger-ghost btn-sm" onclick="deleteCluster(${c.id})">Delete</button>` : ''}
+                        <button class="btn btn-ghost btn-sm" onclick="closeClusterExpand()">Close</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p style="color:var(--text-3);">${escHtml(c.description || '')}</p>
+                    <div class="stat-grid" id="cluster-stats-grid" style="margin:16px 0;"></div>
+                    <div class="chart-row" style="margin:16px 0;">
+                        <div class="chart-card" style="flex:1;"><div class="card-header"><h3>Score Trend (14 days)</h3></div><div class="card-body chart-body"><canvas id="chart-cluster-trend"></canvas></div></div>
+                        <div class="chart-card" style="flex:1;"><div class="card-header"><h3>Topic Performance</h3></div><div class="card-body chart-body"><canvas id="chart-cluster-topics"></canvas></div></div>
+                    </div>
+                    <div class="insights-card" id="cluster-insights" style="margin:16px 0;"><div class="card-header"><h2>AI Insights</h2><button class="btn btn-ghost btn-sm" onclick="loadClusterInsights(${c.id}, true)">Refresh</button></div><div class="card-body" id="cluster-insights-body"><div class="card-empty">Loading insights...</div></div></div>
+                    <h3 style="margin-top:16px;">Members (${c.count})</h3>
+                    <table class="table"><thead><tr><th>Name</th><th>Phone</th><th>Grade</th><th>Level</th><th>State</th>${c.is_custom ? '<th></th>' : ''}</tr></thead><tbody>
+                    ${c.students.map(s => `<tr><td class="name-cell">${escHtml(s.name)}</td><td class="mono">${s.phone}</td><td>${s.grade}</td><td><span class="badge badge-amber">${s.aptitude_level}</span></td><td><span class="badge badge-blue">${s.state}</span></td>${c.is_custom ? `<td><button class="btn btn-danger-ghost btn-sm" onclick="removeMember(${c.id},'${s.phone}')">Remove</button></td>` : ''}</tr>`).join('')}
+                    </tbody></table>
+                </div>
+            </div>`;
+            el.scrollIntoView({ behavior: 'smooth' });
+            loadClusterStats(id);
+            loadClusterInsights(id, false);
+        }
+
+        function closeClusterExpand() {
+            document.getElementById('cluster-expanded').style.display = 'none';
+            expandedClusterId = null;
+        }
+
+        async function loadClusterStats(id) {
+            try {
+                const stats = await api(`/api/clusters/${id}/stats`);
+                document.getElementById('cluster-stats-grid').innerHTML = `
+                    <div class="stat-card"><div class="stat-label">Members</div><div class="stat-value">${stats.member_count}</div></div>
+                    <div class="stat-card"><div class="stat-label">Avg Score</div><div class="stat-value">${Math.round(stats.avg_score * 100)}%</div></div>
+                    <div class="stat-card"><div class="stat-label">Response Rate</div><div class="stat-value">${Math.round(stats.response_rate * 100)}%</div></div>
+                `;
+                // Score trend chart
+                destroyChart('cluster-trend');
+                if (stats.score_trend && stats.score_trend.length) {
+                    const labels = stats.score_trend.map(d => d.date.slice(5));
+                    const scores = stats.score_trend.map(d => d.avg_score != null ? Math.round(d.avg_score * 100) : null);
+                    chartInstances['cluster-trend'] = new Chart(document.getElementById('chart-cluster-trend'), {
+                        type: 'line',
+                        data: { labels, datasets: [{ label: 'Avg Score %', data: scores, borderColor: chartTheme.amber, backgroundColor: 'rgba(226,163,54,0.1)', fill: true, tension: 0.3, spanGaps: true, pointRadius: 2 }] },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } }, x: { ticks: { maxTicksLimit: 7 } } } }
+                    });
+                }
+                // Topic performance chart
+                destroyChart('cluster-topics');
+                if (stats.topic_performance && stats.topic_performance.length) {
+                    chartInstances['cluster-topics'] = new Chart(document.getElementById('chart-cluster-topics'), {
+                        type: 'bar',
+                        data: { labels: stats.topic_performance.map(t => t.topic), datasets: [{ label: 'Avg Score %', data: stats.topic_performance.map(t => Math.round(t.avg_score * 100)), backgroundColor: chartTheme.blue, borderRadius: 4 }] },
+                        options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { min: 0, max: 100, ticks: { callback: v => v + '%' } }, y: { grid: { display: false } } } }
+                    });
+                }
+            } catch (e) { console.error('Cluster stats error:', e); }
+        }
+
+        async function loadClusterInsights(id, force) {
+            const body = document.getElementById('cluster-insights-body');
+            body.innerHTML = '<div class="card-empty" style="padding:16px;">Generating AI insights...</div>';
+            try {
+                const data = await api(`/api/clusters/${id}/insights`);
+                let html = '<div class="insights-content">';
+                html += '<p class="insights-summary">' + escHtml(data.summary || '') + '</p>';
+                if (data.strengths && data.strengths.length) {
+                    html += '<div class="insights-section"><h3 class="insights-section-title">Strengths</h3>';
+                    html += data.strengths.map(s => '<div class="badge badge-green insights-badge">' + escHtml(s) + '</div>').join('');
+                    html += '</div>';
+                }
+                if (data.weaknesses && data.weaknesses.length) {
+                    html += '<div class="insights-section"><h3 class="insights-section-title">Areas for Improvement</h3>';
+                    html += data.weaknesses.map(s => '<div class="badge badge-amber insights-badge">' + escHtml(s) + '</div>').join('');
+                    html += '</div>';
+                }
+                if (data.recommendations && data.recommendations.length) {
+                    html += '<div class="insights-section"><h3 class="insights-section-title">Recommendations</h3><ul class="insights-list">';
+                    html += data.recommendations.map(r => '<li>' + escHtml(r) + '</li>').join('');
+                    html += '</ul></div>';
+                }
+                if (data.suggested_topics && data.suggested_topics.length) {
+                    html += '<div class="insights-section"><h3 class="insights-section-title">Suggested Focus Topics</h3>';
+                    html += data.suggested_topics.map(s => '<div class="badge badge-blue insights-badge">' + escHtml(s) + '</div>').join('');
+                    html += '</div>';
+                }
+                if (data.generated_at) {
+                    html += '<div class="insights-meta">Generated: ' + new Date(data.generated_at).toLocaleString() + (data.cached ? ' (cached)' : '') + '</div>';
+                }
+                html += '</div>';
+                body.innerHTML = html;
+            } catch (e) { body.innerHTML = '<div class="card-empty">Unable to load cluster insights.</div>'; }
+        }
+
+        // Cluster CRUD
+        function openClusterModal() {
+            api('/api/students?').then(students => {
+                document.getElementById('c-students-list').innerHTML = students.map(s =>
+                    `<label class="checkbox-item"><input type="checkbox" value="${s.phone}"> ${escHtml(s.name)} (${s.grade})</label>`
+                ).join('');
+            });
+            document.getElementById('cluster-modal').classList.add('open');
+        }
+        function closeClusterModal() { document.getElementById('cluster-modal').classList.remove('open'); ['c-name','c-desc'].forEach(id => document.getElementById(id).value = ''); }
+
+        async function createCluster() {
+            const name = document.getElementById('c-name').value.trim();
+            if (!name) return alert('Cluster name is required.');
+            const phones = [...document.querySelectorAll('#c-students-list input:checked')].map(i => i.value);
+            const r = await post('/api/clusters', {
+                name,
+                description: document.getElementById('c-desc').value.trim(),
+                grade_level: document.getElementById('c-grade').value,
+                student_phones: phones,
+            });
+            if (r.error) return alert(r.error);
+            closeClusterModal();
+            await loadClusters();
+        }
+
+        async function deleteCluster(id) {
+            if (!confirm('Delete this custom cluster?')) return;
+            await fetch(`/api/clusters/${id}`, { method: 'DELETE', headers: authHeaders });
+            closeClusterExpand();
+            await loadClusters();
+        }
+
+        let addMembersClusterId = null;
+        function openAddMembersModal(clusterId) {
+            addMembersClusterId = clusterId;
+            const c = allClusters.find(x => x.id === clusterId);
+            const existingPhones = new Set(c ? c.students.map(s => s.phone) : []);
+            api('/api/students?').then(students => {
+                const available = students.filter(s => !existingPhones.has(s.phone));
+                document.getElementById('am-students-list').innerHTML = available.length
+                    ? available.map(s => `<label class="checkbox-item"><input type="checkbox" value="${s.phone}"> ${escHtml(s.name)} (${s.grade})</label>`).join('')
+                    : '<div class="card-empty">All students are already in this cluster.</div>';
+            });
+            document.getElementById('add-members-modal').classList.add('open');
+        }
+        function closeAddMembersModal() { document.getElementById('add-members-modal').classList.remove('open'); }
+
+        async function addMembersToCluster() {
+            const phones = [...document.querySelectorAll('#am-students-list input:checked')].map(i => i.value);
+            if (!phones.length) return;
+            await post(`/api/clusters/${addMembersClusterId}/members`, { student_phones: phones });
+            closeAddMembersModal();
+            await loadClusters();
+            if (expandedClusterId === addMembersClusterId) expandCluster(addMembersClusterId);
+        }
+
+        async function removeMember(clusterId, phone) {
+            if (!confirm('Remove this student from the cluster?')) return;
+            await fetch(`/api/clusters/${clusterId}/members/${encodeURIComponent(phone)}`, { method: 'DELETE', headers: authHeaders });
+            await loadClusters();
+            expandCluster(clusterId);
+        }
+
+        // ── Assessments ─────────────────────────
+        let assessPage = 1;
+        const assessPageSize = 25;
+
+        async function loadAssessments(resetPage) {
+            if (resetPage) assessPage = 1;
+            const status = document.getElementById('filter-status').value;
+            const topicId = document.getElementById('filter-assess-topic').value;
+            const grade = document.getElementById('filter-assess-grade').value;
+            const dateFrom = document.getElementById('filter-date-from').value;
+            const dateTo = document.getElementById('filter-date-to').value;
+            let url = `/api/assessments?page=${assessPage}&page_size=${assessPageSize}&`;
+            if (status) url += `status=${status}&`;
+            if (topicId) url += `topic_id=${topicId}&`;
+            if (grade) url += `grade=${encodeURIComponent(grade)}&`;
+            if (dateFrom) url += `date_from=${dateFrom}&`;
+            if (dateTo) url += `date_to=${dateTo}&`;
+
+            const data = await api(url);
+            const items = data.items || [];
+            const total = data.total || 0;
+
+            // Load stats
+            let statsUrl = '/api/assessments/stats?';
+            if (topicId) statsUrl += `topic_id=${topicId}&`;
+            if (grade) statsUrl += `grade=${encodeURIComponent(grade)}&`;
+            const stats = await api(statsUrl);
+            document.getElementById('assessment-stats').innerHTML = `
+                <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">${stats.total}</div></div>
+                <div class="stat-card"><div class="stat-label">Graded</div><div class="stat-value">${stats.graded}</div></div>
+                <div class="stat-card"><div class="stat-label">Avg Score</div><div class="stat-value">${Math.round(stats.avg_score * 100)}%</div></div>
+                <div class="stat-card"><div class="stat-label">Response Rate</div><div class="stat-value">${Math.round(stats.response_rate * 100)}%</div></div>
+                <div class="stat-card"><div class="stat-label">Correct Rate</div><div class="stat-value">${Math.round(stats.correct_rate * 100)}%</div></div>
+            `;
+
+            // Score distribution chart
+            destroyChart('score-dist');
+            if (stats.score_distribution) {
+                const labels = Object.keys(stats.score_distribution);
+                const values = Object.values(stats.score_distribution);
+                chartInstances['score-dist'] = new Chart(document.getElementById('chart-score-dist'), {
+                    type: 'bar',
+                    data: { labels, datasets: [{ label: 'Students', data: values, backgroundColor: [chartTheme.red, chartTheme.amber, chartTheme.blue, chartTheme.green, chartTheme.purple], borderRadius: 4 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { grid: { display: false } } } }
+                });
+            }
+
+            const tbl = document.getElementById('assessments-table');
+            if (!items.length) { tbl.innerHTML = '<div class="card-empty">No assessments match these filters.</div>'; } else {
+                tbl.innerHTML = '<table class="table"><thead><tr><th>Student</th><th>Grade</th><th>Topic</th><th>Question</th><th>Status</th><th>Response</th><th>Score</th><th>Feedback</th><th>Areas</th></tr></thead><tbody>' +
+                    items.map(a => `<tr>
+                <td class="name-cell">${escHtml(a.student_name)}</td>
+                <td>${a.student_grade || '-'}</td>
+                <td>${escHtml(a.topic_title || '-')}</td>
+                <td style="max-width:180px;">${escHtml(a.question_text)}</td>
+                <td><span class="badge badge-blue">${a.status}</span></td>
+                <td>${a.response ? escHtml(a.response) : '-'}</td>
+                <td class="mono">${a.score != null ? Math.round(a.score * 100) + '%' : '-'}</td>
+                <td style="max-width:180px;">${a.feedback ? escHtml(a.feedback) : '-'}</td>
+                <td>${a.improvement && a.improvement !== 'none' ? '<span class="badge badge-red">' + escHtml(a.improvement) + '</span>' : '-'}</td>
+            </tr>`).join('') + '</tbody></table>';
+            }
+
+            // Pagination
+            const totalPages = Math.ceil(total / assessPageSize);
+            const pag = document.getElementById('assess-pagination');
+            if (totalPages > 1) {
+                pag.style.display = 'flex';
+                pag.innerHTML = `
+                    <button class="btn btn-ghost btn-sm" ${assessPage <= 1 ? 'disabled' : ''} onclick="assessPage--;loadAssessments()">Prev</button>
+                    <span class="pagination-info">Page ${assessPage} of ${totalPages} (${total} total)</span>
+                    <button class="btn btn-ghost btn-sm" ${assessPage >= totalPages ? 'disabled' : ''} onclick="assessPage++;loadAssessments()">Next</button>
+                `;
+            } else { pag.style.display = 'none'; }
+        }
+
+        // ── Alerts ───────────────────────────────
+        async function loadAlerts() {
+            const alerts = await api('/api/alerts');
+            const feed = document.getElementById('alerts-feed');
+            if (!alerts.length) { feed.innerHTML = '<div class="card-empty">No active alerts. All students are engaged!</div>'; return; }
+            feed.innerHTML = alerts.map(a => `
+        <div class="alert-card alert-${a.severity}">
+            <div class="alert-content">
+                <div class="alert-icon">${a.severity === 'critical' ? '🔴' : a.severity === 'warning' ? '🟡' : 'ℹ️'}</div>
+                <div>
+                    <div class="alert-msg">${a.message}</div>
+                    <div class="alert-meta">${a.type} · ${new Date(a.created).toLocaleString()}</div>
+                </div>
+            </div>
+            <div class="alert-actions">
+                <button class="btn btn-primary btn-sm" onclick="nudge(${a.id})">Send Nudge</button>
+                <button class="btn btn-ghost btn-sm" onclick="dismiss(${a.id})">Dismiss</button>
+            </div>
+        </div>
+    `).join('');
+        }
+
+        async function nudge(id) { await post(`/api/alerts/${id}/nudge`, {}); await loadAlerts(); await loadStats(); }
+        async function dismiss(id) { await post(`/api/alerts/${id}/dismiss`, {}); await loadAlerts(); await loadStats(); }
+
+        // ── Simulator ──────────────────────────────
+        let simMessages = [];
+
+        async function loadSimStudents() {
+            const students = await api('/api/students?');
+            const sel = document.getElementById('sim-student');
+            sel.innerHTML = '<option value="">-- Select a registered student --</option>' +
+                students.map(s => `<option value="${s.phone}">${s.name} (${s.phone}) - ${s.state}</option>`).join('');
+        }
+
+        function simSelectStudent() {
+            const phone = document.getElementById('sim-student').value;
+            if (phone) {
+                document.getElementById('sim-phone').value = phone;
+                simEnableInput(true);
+            } else {
+                simEnableInput(false);
+                document.getElementById('sim-status').style.display = 'none';
+            }
+        }
+
+        document.getElementById('sim-phone').addEventListener('input', function () {
+            simEnableInput(this.value.trim().length > 0);
+        });
+
+        function simGetPhone() {
+            return document.getElementById('sim-phone').value.trim() || document.getElementById('sim-student').value;
+        }
+
+        function simEnableInput(enabled) {
+            document.getElementById('sim-text').disabled = !enabled;
+            document.getElementById('sim-send-btn').disabled = !enabled;
+            if (enabled) document.getElementById('sim-text').focus();
+        }
+
+        async function simSend() {
+            const phone = simGetPhone();
+            const text = document.getElementById('sim-text').value.trim();
+            if (!phone || !text) return;
+
+            simMessages.push({ role: 'student', text });
+            simRender();
+            document.getElementById('sim-text').value = '';
+            simShowTyping(true);
+
+            try {
+                const r = await post('/api/simulate-sms', { phone_number: phone, message: text });
+                simShowTyping(false);
+                if (r.error) {
+                    simMessages.push({ role: 'system', text: 'Error: ' + r.error });
+                } else {
+                    for (const reply of r.replies) {
+                        simMessages.push({ role: 'system', text: reply });
+                    }
+                    // Update status bar
+                    const bar = document.getElementById('sim-status');
+                    if (r.student_name) {
+                        document.getElementById('sim-status-name').textContent = r.student_name;
+                        document.getElementById('sim-status-state').textContent = r.student_state || '';
+                        document.getElementById('sim-status-level').textContent = r.aptitude_level || '';
+                        bar.style.display = 'flex';
+                    }
+                }
+            } catch (e) {
+                simShowTyping(false);
+                simMessages.push({ role: 'system', text: 'Network error. Is the server running?' });
+            }
+            simRender();
+        }
+
+        function simRender() {
+            const el = document.getElementById('sim-messages');
+            if (!simMessages.length) {
+                el.innerHTML = '<div class="sim-chat-empty">Select a student above and start typing to simulate an SMS conversation.</div>';
+                return;
+            }
+            el.innerHTML = simMessages.map(m => `
+                <div class="sim-bubble sim-bubble-${m.role}">
+                    <div class="sim-bubble-label">${m.role === 'student' ? 'Student' : 'Somo'}</div>
+                    <div class="sim-bubble-text">${escHtml(m.text)}</div>
+                </div>
+            `).join('');
+            el.scrollTop = el.scrollHeight;
+        }
+
+        function simShowTyping(show) {
+            const el = document.getElementById('sim-messages');
+            const existing = el.querySelector('.sim-typing');
+            if (existing) existing.remove();
+            if (show) {
+                const d = document.createElement('div');
+                d.className = 'sim-bubble sim-bubble-system sim-typing';
+                d.innerHTML = '<div class="sim-bubble-label">Somo</div><div class="sim-bubble-text" style="color:var(--text-3);font-style:italic;">Thinking...</div>';
+                el.appendChild(d);
+                el.scrollTop = el.scrollHeight;
+            }
+        }
+
+        function simClearChat() { simMessages = []; simRender(); }
+
+        function escHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+        // ── Charts ───────────────────────────────
+        const chartTheme = {
+            bg: '#1a1a22',
+            grid: 'rgba(255,255,255,0.06)',
+            text: 'rgba(255,255,255,0.6)',
+            amber: '#e2a336',
+            blue: '#5b9cf5',
+            green: '#3ecf71',
+            red: '#ef5350',
+            purple: '#b39ddb',
+        };
+        Chart.defaults.color = chartTheme.text;
+        Chart.defaults.borderColor = chartTheme.grid;
+        Chart.defaults.font.family = 'Inter, sans-serif';
+
+        let chartInstances = {};
+        function destroyChart(id) { if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; } }
+
+        async function loadCharts() {
+            try {
+                const [trends, analytics] = await Promise.all([
+                    api('/api/stats/trends'),
+                    api('/api/stats/analytics'),
+                ]);
+                renderScoreTrend(trends);
+                renderStateDist(analytics.state_distribution);
+                renderTopicPerf(analytics.topic_performance);
+                renderBloomDist(analytics.bloom_distribution);
+            } catch (e) { console.error('Chart load error:', e); }
+        }
+
+        function renderScoreTrend(trends) {
+            destroyChart('score-trend');
+            const labels = trends.daily_scores.map(d => d.date.slice(5));
+            const scores = trends.daily_scores.map(d => d.avg_score != null ? Math.round(d.avg_score * 100) : null);
+            chartInstances['score-trend'] = new Chart(document.getElementById('chart-score-trend'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Avg Score %',
+                        data: scores,
+                        borderColor: chartTheme.amber,
+                        backgroundColor: 'rgba(226,163,54,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        spanGaps: true,
+                        pointRadius: 2,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: chartTheme.grid } },
+                        x: { grid: { display: false }, ticks: { maxTicksLimit: 8 } }
+                    }
+                }
+            });
+        }
+
+        function renderStateDist(dist) {
+            destroyChart('state-dist');
+            const labels = Object.keys(dist);
+            const data = Object.values(dist);
+            const colors = [chartTheme.green, chartTheme.blue, chartTheme.amber, chartTheme.red, chartTheme.purple];
+            chartInstances['state-dist'] = new Chart(document.getElementById('chart-state-dist'), {
+                type: 'doughnut',
+                data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length), borderWidth: 0 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { padding: 12, usePointStyle: true } } },
+                    cutout: '65%',
+                }
+            });
+        }
+
+        function renderTopicPerf(topics) {
+            destroyChart('topic-perf');
+            chartInstances['topic-perf'] = new Chart(document.getElementById('chart-topic-perf'), {
+                type: 'bar',
+                data: {
+                    labels: topics.map(t => t.topic),
+                    datasets: [{
+                        label: 'Avg Score %',
+                        data: topics.map(t => Math.round(t.avg_score * 100)),
+                        backgroundColor: chartTheme.blue,
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { min: 0, max: 100, ticks: { callback: v => v + '%' }, grid: { color: chartTheme.grid } },
+                        y: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function renderBloomDist(dist) {
+            destroyChart('bloom-dist');
+            const order = ['remember', 'understand', 'apply', 'analyze'];
+            const labels = order.filter(k => dist[k] !== undefined);
+            const data = labels.map(k => dist[k] || 0);
+            chartInstances['bloom-dist'] = new Chart(document.getElementById('chart-bloom-dist'), {
+                type: 'doughnut',
+                data: {
+                    labels,
+                    datasets: [{ data, backgroundColor: [chartTheme.green, chartTheme.blue, chartTheme.amber, chartTheme.purple], borderWidth: 0 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { padding: 12, usePointStyle: true } } },
+                    cutout: '65%',
+                }
+            });
+        }
+
+        // ── Student Charts ──────────────────────────
+        async function loadStudentCharts(phone) {
+            try {
+                const data = await api(`/api/stats/student/${encodeURIComponent(phone)}/trends`);
+                const container = document.getElementById('student-charts');
+                container.style.display = 'block';
+
+                // Score History Line Chart
+                destroyChart('student-scores');
+                if (data.score_history.length) {
+                    chartInstances['student-scores'] = new Chart(document.getElementById('chart-student-scores'), {
+                        type: 'line',
+                        data: {
+                            labels: data.score_history.map(h => h.date.slice(5, 10)),
+                            datasets: [{
+                                label: 'Score %',
+                                data: data.score_history.map(h => Math.round(h.score * 100)),
+                                borderColor: chartTheme.amber,
+                                backgroundColor: 'rgba(226,163,54,0.1)',
+                                fill: true, tension: 0.3, pointRadius: 3,
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { min: 0, max: 100, ticks: { callback: v => v + '%' } },
+                                x: { ticks: { maxTicksLimit: 10 } }
+                            }
+                        }
+                    });
+                }
+
+                // Topic Accuracy Bar Chart
+                destroyChart('student-topics');
+                if (data.topic_breakdown.length) {
+                    chartInstances['student-topics'] = new Chart(document.getElementById('chart-student-topics'), {
+                        type: 'bar',
+                        data: {
+                            labels: data.topic_breakdown.map(t => t.topic),
+                            datasets: [{
+                                label: 'Accuracy %',
+                                data: data.topic_breakdown.map(t => Math.round(t.accuracy * 100)),
+                                backgroundColor: chartTheme.blue,
+                                borderRadius: 4,
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                y: { min: 0, max: 100, ticks: { callback: v => v + '%' } },
+                                x: { grid: { display: false } }
+                            }
+                        }
+                    });
+                }
+
+                container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } catch (e) { console.error('Student chart error:', e); }
+        }
+
+        // ── AI Insights ──────────────────────────────
+        async function loadInsights(force) {
+            const body = document.getElementById('insights-body');
+            body.innerHTML = '<div class="card-empty" style="padding:16px;">Generating AI insights...</div>';
+            try {
+                const url = force ? '/api/stats/insights?force=1' : '/api/stats/insights';
+                const data = await api(url);
+                let html = '<div class="insights-content">';
+                html += '<p class="insights-summary">' + escHtml(data.summary || '') + '</p>';
+                if (data.at_risk && data.at_risk.length) {
+                    html += '<div class="insights-section"><h3 class="insights-section-title">Students Needing Attention</h3>';
+                    html += data.at_risk.map(s => '<div class="badge badge-amber insights-badge">' + escHtml(s) + '</div>').join('');
+                    html += '</div>';
+                }
+                if (data.strengths && data.strengths.length) {
+                    html += '<div class="insights-section"><h3 class="insights-section-title">Top Performers</h3>';
+                    html += data.strengths.map(s => '<div class="badge badge-green insights-badge">' + escHtml(s) + '</div>').join('');
+                    html += '</div>';
+                }
+                if (data.recommendations && data.recommendations.length) {
+                    html += '<div class="insights-section"><h3 class="insights-section-title">Recommendations</h3><ul class="insights-list">';
+                    html += data.recommendations.map(r => '<li>' + escHtml(r) + '</li>').join('');
+                    html += '</ul></div>';
+                }
+                if (data.generated_at) {
+                    html += '<div class="insights-meta">Generated: ' + new Date(data.generated_at).toLocaleString() + (data.cached ? ' (cached)' : '') + '</div>';
+                }
+                html += '</div>';
+                body.innerHTML = html;
+            } catch (e) {
+                body.innerHTML = '<div class="card-empty">Unable to load insights.</div>';
+            }
+        }
+
+        // ── Init ────────────────────────────────
+        async function populateAssessTopicFilter() {
+            const topics = await api('/api/topics');
+            const sel = document.getElementById('filter-assess-topic');
+            sel.innerHTML = '<option value="">All Topics</option>' + topics.map(t => `<option value="${t.id}">${escHtml(t.title)}</option>`).join('');
+        }
+
+        async function loadAll() {
+            await Promise.all([loadStats(), loadStudents(), loadTopics(), loadClusters(), loadAssessments(), loadAlerts(), loadSimStudents(), populateAssessTopicFilter()]);
+            loadCharts();
+            loadInsights(false);
+        }
+        loadAll();
+    </script>
+</body>
+
+</html>
