@@ -9,6 +9,7 @@ to stay within a single 160-character SMS segment.
 """
 
 import os
+from datetime import datetime, timezone, timedelta
 
 from sms_utils import safe_sms
 
@@ -61,24 +62,7 @@ def send_sms(to: str, message: str, sender: str | None = None) -> dict:
     """
     Send an SMS through Twilio (or capture it in simulation mode).
 
-    The message is automatically sanitised (GSM-7 safe) and truncated to
-    155 characters before dispatch so callers never need to worry about
-    encoding issues or concatenation costs.
-
-    Parameters
-    ----------
-    to : str
-        Recipient phone number in E.164 format (e.g. "+254712345678").
-    message : str
-        The text body (will be sanitised and truncated automatically).
-    sender : str | None
-        Optional Twilio phone number to send from. Falls back to
-        messaging service SID if not provided.
-
-    Returns
-    -------
-    dict
-        Status info from the Twilio API, or capture confirmation.
+    Tries Messaging Service SID first, falls back to phone number on failure.
     """
     message = safe_sms(message)
 
@@ -93,21 +77,79 @@ def send_sms(to: str, message: str, sender: str | None = None) -> dict:
         print(f"[TWILIO] Client not configured – SMS to {to} skipped")
         return {"error": "Twilio client not configured (missing credentials)"}
 
-    try:
-        kwargs = {
-            "body": message,
-            "to": to,
-        }
-        if sender:
-            kwargs["from_"] = sender
-        elif os.getenv("TWILIO_MESSAGING_SERVICE_SID", ""):
-            kwargs["messaging_service_sid"] = os.getenv("TWILIO_MESSAGING_SERVICE_SID", "")
-        elif os.getenv("TWILIO_PHONE_NUMBER", ""):
-            kwargs["from_"] = os.getenv("TWILIO_PHONE_NUMBER", "")
+    msid = os.getenv("TWILIO_MESSAGING_SERVICE_SID", "")
+    phone = os.getenv("TWILIO_PHONE_NUMBER", "")
 
-        msg = client.messages.create(**kwargs)
-        print(f"[TWILIO] SMS sent to {to}: sid={msg.sid}, status={msg.status}")
-        return {"status": msg.status, "sid": msg.sid}
+    # Determine send order: try specified sender, then messaging service, then phone
+    attempts = []
+    if sender:
+        attempts.append({"from_": sender, "body": message, "to": to})
+    else:
+        if msid:
+            attempts.append({"messaging_service_sid": msid, "body": message, "to": to})
+        if phone:
+            attempts.append({"from_": phone, "body": message, "to": to})
+
+    if not attempts:
+        print(f"[TWILIO] No sender configured (no MESSAGING_SERVICE_SID or PHONE_NUMBER)")
+        return {"error": "No Twilio sender configured"}
+
+    last_error = None
+    for i, kwargs in enumerate(attempts):
+        try:
+            msg = client.messages.create(**kwargs)
+            via = kwargs.get("from_") or kwargs.get("messaging_service_sid", "")
+            print(f"[TWILIO] SMS sent to {to} via {via}: sid={msg.sid}, status={msg.status}")
+            return {"status": msg.status, "sid": msg.sid}
+        except Exception as exc:
+            last_error = exc
+            via = kwargs.get("from_") or kwargs.get("messaging_service_sid", "")
+            print(f"[TWILIO] Attempt {i+1} failed (via {via}): {exc}")
+            # Try next method
+            continue
+
+    print(f"[TWILIO] All send attempts failed for {to}: {last_error}")
+    return {"error": str(last_error)}
+
+
+# ---------------------------------------------------------------------------
+# Inbound message polling (no webhook/tunnel needed)
+# ---------------------------------------------------------------------------
+
+def fetch_inbound_messages(since_minutes: int = 2) -> list[dict]:
+    """
+    Fetch recent inbound SMS messages from Twilio's API.
+
+    Returns a list of dicts with keys: sid, from_number, body, date_sent.
+    """
+    client = _get_client()
+    if client is None:
+        return []
+
+    phone = os.getenv("TWILIO_PHONE_NUMBER", "")
+    if not phone:
+        return []
+
+    since = datetime.now(timezone.utc) - timedelta(minutes=since_minutes)
+
+    try:
+        messages = client.messages.list(
+            to=phone,
+            date_sent_after=since,
+            limit=20,
+        )
+        results = []
+        for m in messages:
+            if m.direction == "inbound":
+                results.append({
+                    "sid": m.sid,
+                    "from_number": m.from_,
+                    "body": m.body or "",
+                    "date_sent": m.date_sent,
+                })
+        if results:
+            print(f"[TWILIO] Polled {len(results)} inbound message(s)")
+        return results
     except Exception as exc:
-        print(f"[TWILIO] Failed to send SMS to {to}: {exc}")
-        return {"error": str(exc)}
+        print(f"[TWILIO] Polling error: {exc}")
+        return []

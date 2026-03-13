@@ -40,8 +40,34 @@ from llm_service import (
     suggest_improvements, generate_sms_reply, summarize_history,
     generate_class_insights, generate_cluster_insights,
 )
-from twilio_service import send_sms, set_capture_mode, get_captured_messages
+from twilio_service import send_sms, set_capture_mode, get_captured_messages, fetch_inbound_messages
 from engagement_monitor import engagement_loop, send_nudge
+
+
+async def _poll_inbound_sms():
+    """Poll Twilio for inbound messages every 15 seconds (no webhook needed)."""
+    print("[POLL] Inbound SMS polling started (every 15s)")
+    seen_sids: set[str] = set()
+    while True:
+        try:
+            await asyncio.sleep(15)
+            loop = asyncio.get_event_loop()
+            messages = await loop.run_in_executor(None, fetch_inbound_messages, 2)
+            for msg in messages:
+                if msg["sid"] in seen_sids:
+                    continue
+                seen_sids.add(msg["sid"])
+                print(f"[POLL] New inbound from {msg['from_number']}: {msg['body']!r}")
+                await loop.run_in_executor(
+                    None, _process_sms, msg["from_number"], msg["body"], msg["sid"]
+                )
+            # Prevent memory growth
+            if len(seen_sids) > 200:
+                seen_sids.clear()
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            print(f"[POLL] Error: {e}")
 
 
 @asynccontextmanager
@@ -50,8 +76,10 @@ async def lifespan(app: FastAPI):
     _seed_defaults()
     _migrate_auto_clusters()
     task = asyncio.create_task(engagement_loop())
+    poll_task = asyncio.create_task(_poll_inbound_sms())
     yield
     task.cancel()
+    poll_task.cancel()
 
 
 app = FastAPI(title="Somo", version="3.0.0", lifespan=lifespan)
@@ -195,7 +223,9 @@ async def login(request: Request, session: Session = Depends(get_session)):
     inst = session.exec(stmt).first()
     if not inst or not verify_passcode(passcode, inst.passcode):
         return JSONResponse({"error": "Invalid credentials."}, status_code=401)
-    return {"instructor_id": inst.id, "name": inst.name}
+    response = JSONResponse({"instructor_id": inst.id, "name": inst.name})
+    response.set_cookie(key="instructor_id", value=str(inst.id), httponly=True)
+    return response
 
 
 # ═══════════════════════════════════════════════════════
@@ -1398,6 +1428,17 @@ def _start_aptitude(phone: str):
 
 def _process_sms(phone: str, text: str, msg_id: str | None):
     """Background worker: full SMS conversation state machine."""
+    import traceback
+    print(f"[SMS] >>> Incoming from {phone}: {text!r}")
+    try:
+        _process_sms_inner(phone, text, msg_id)
+    except Exception as e:
+        print(f"[SMS] !!! UNHANDLED ERROR processing {phone}: {e}")
+        traceback.print_exc()
+
+
+def _process_sms_inner(phone: str, text: str, msg_id: str | None):
+    """Inner SMS processing logic."""
     with Session(engine) as s:
         # Idempotency
         if msg_id:
@@ -1409,6 +1450,7 @@ def _process_sms(phone: str, text: str, msg_id: str | None):
         # Get student
         student = s.get(Student, phone)
         if student is None:
+            print(f"[SMS] Student not found for {phone} — sending registration prompt")
             # Unknown number — send info message
             send_sms(to=phone, message="Hi! Ask your instructor to register you for SMS tutoring.")
             return
@@ -1420,6 +1462,7 @@ def _process_sms(phone: str, text: str, msg_id: str | None):
 
         txt = text.strip()
         txt_upper = txt.upper()
+        print(f"[SMS] Student found: {student.name}, state={student.state}, phone={student.phone_number}")
 
         # ── State: registered (shouldn't receive SMS yet, but handle gracefully)
         if student.state == "registered":
@@ -1429,6 +1472,7 @@ def _process_sms(phone: str, text: str, msg_id: str | None):
 
         # ── State: aptitude_test ──
         if student.state == "aptitude_test":
+            print(f"[SMS] State=aptitude_test, step={student.aptitude_step}, stored_q={student.aptitude_current_q!r}")
             step = student.aptitude_step
 
             # Parse stored question and correct answer
@@ -1441,6 +1485,7 @@ def _process_sms(phone: str, text: str, msg_id: str | None):
                 q_answer = ""
 
             # Grade using the actual question text and correct answer
+            print(f"[SMS] Grading aptitude answer: q={q_text!r}, answer={txt!r}, hint={q_answer!r}")
             result = grade_answer(
                 question_text=q_text or f"Aptitude Q{step + 1} for {student.grade}",
                 student_answer=txt,
@@ -1452,6 +1497,8 @@ def _process_sms(phone: str, text: str, msg_id: str | None):
 
             if result["correct"]:
                 student.aptitude_correct += 1
+
+            print(f"[SMS] Grade result: score={result['score']}, correct={result['correct']}, feedback={result['feedback']!r}")
 
             student.aptitude_step = step + 1
             s.add(student)
