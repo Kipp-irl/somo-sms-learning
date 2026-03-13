@@ -6,7 +6,7 @@
 
 ## The Problem: Displaced Learning Lifeline
 
-**82 million people** are forcibly displaced worldwide. In East Africa alone, millions of school-age children face:
+**Millions of people** are forcibly displaced worldwide. In East Africa alone, millions of school-age children face:
 
 - **No internet access** — Refugee camps and rural displacement areas have minimal connectivity
 - **Interrupted schooling** — Children miss months or years of education during displacement
