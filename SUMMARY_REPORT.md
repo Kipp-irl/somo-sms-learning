@@ -65,13 +65,13 @@ Once a topic is selected, the AI generates an opening question using Socratic qu
 
 From here, the student and the AI go back and forth over SMS. There are two ways learning happens:
 
-**Instructor-assigned questions:** An instructor can select specific questions from the dashboard and send them to individual students or entire clusters at once. When the student replies, the AI grades their answer, stores the result, and sends feedback. If the student gets the answer wrong and has attempted at least 3 questions overall, the system also sends a follow-up message with specific improvement suggestions based on their weak areas.
+**Instructor-assigned questions:** An instructor can select specific questions from the dashboard and send them to individual students or entire clusters at once. When the student replies, the AI grades their answer, stores the result, and sends feedback. If the student gets an answer wrong and has attempted at least 3 questions overall, the system also sends a follow-up message with specific improvement suggestions based on their accumulated weak areas.
 
-**Free-form Socratic tutoring:** When a student is engaged with a topic, they can just keep texting naturally. The AI acts as a tutor — asking questions one at a time, evaluating responses, providing hints when the student is stuck, and gradually increasing difficulty. Every message from the student is assessed: the AI determines whether it is an answer attempt, scores it if so, and adjusts accordingly. This is not a static quiz. It is an ongoing conversation adapted to the student's performance in real time.
+**Free-form Socratic tutoring:** When a student is engaged with a topic, they can just keep texting naturally. The AI acts as a tutor — asking questions one at a time, evaluating responses, providing hints when the student is stuck, and gradually increasing difficulty. Every message from the student is assessed: the AI determines whether it is an answer attempt, scores it if so, and adjusts accordingly. These interactions are also tracked in the analytics system as virtual assignments, so instructors have visibility into free-form learning alongside structured assessments. This is not a static quiz. It is an ongoing conversation adapted to the student's performance in real time.
 
 ### 3.5 Adaptive Difficulty
 
-The system tracks every answer a student gives. After every 5 graded responses within a topic, it checks the student's recent accuracy. If they are getting 80% or more correct, the difficulty bumps up one level (beginner to intermediate, or intermediate to advanced). If they are scoring 30% or below, the difficulty drops down. This ensures students are always working at the edge of their ability — challenged enough to learn but not so overwhelmed that they give up.
+The system tracks every answer a student gives within a topic. After every 5 graded responses, it checks the student's overall accuracy for that topic. If they are getting 80% or more correct across all their attempts, the difficulty bumps up one level (beginner to intermediate, or intermediate to advanced). If they are scoring 30% or below overall, the difficulty drops down. This ensures students are always working at the edge of their ability — challenged enough to learn but not so overwhelmed that they give up.
 
 ### 3.6 Conversation Memory
 
